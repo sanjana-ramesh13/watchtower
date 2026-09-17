@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ website.name }} - Monitoring History - WatchTower{% endblock %}
+
+{% block content %}
+    <div class="dashboard-container">
+        <div class="history-header">
+            <h2>{{ website.name }}</h2>
+            <p class="website-url"><a href="{{ website.url }}" target="_blank">{{ website.url }}</a></p>
+            
+            <div class="history-stats">
+                {% if results %}
+                    {% set up_count = results|selectattr('is_up')|list|length %}
+                    {% set total_count = results|length %}
+                    {% set uptime_percent = (up_count / total_count * 100)|int %}
+                    
+                    <div class="stat-box">
+                        <h3>{{ uptime_percent }}%</h3>
+                        <p>Uptime</p>
+                    </div>
+                    
+                    <div class="stat-box">
+                        <h3>{{ up_count }}/{{ total_count }}</h3>
+                        <p>Checks Passed</p>
+                    </div>
+                    
+                    {% if results[0].response_time_ms %}
+                        <div class="stat-box">
+                            <h3>{{ results[0].response_time_ms|int }}ms</h3>
+                            <p>Last Response Time</p>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="dashboard-actions">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+        </div>
+        
+        {% if results %}
+            <div class="websites-table">
+                <h3>Recent Checks (Last 20)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Checked At</th>
+                            <th>Status</th>
+                            <th>Response Time</th>
+                            <th>HTTP Code</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                            <tr class="{% if result.is_up %}status-up{% else %}status-down{% endif %}">
+                                <td>{{ result.checked_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if result.is_up %}
+                                        <span class="badge badge-active">✅ UP</span>
+                                    {% else %}
+                                        <span class="badge badge-inactive">❌ DOWN</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if result.response_time_ms %}
+                                        {{ result.response_time_ms|int }}ms
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>{{ result.status_code or 'N/A' }}</td>
+                                <td>{{ result.error_message or '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No monitoring history yet. Run a check to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

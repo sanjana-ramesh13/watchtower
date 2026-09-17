@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - WatchTower{% endblock %}
+
+{% block content %}
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h2>Welcome, {{ user.username }}!</h2>
+            <p>You have {{ websites|length }} website(s) being monitored</p>
+        </div>
+        
+        <div class="dashboard-actions">
+            <a href="{{ url_for('add_website') }}" class="btn btn-primary">+ Add Website</a>
+        </div>
+        
+        {% if websites %}
+            <div class="websites-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Website Name</th>
+                            <th>URL</th>
+                            <th>Added On</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for website in websites %}
+                            <tr>
+                                <td>{{ website.name }}</td>
+                                <td><a href="{{ website.url }}" target="_blank">{{ website.url }}</a></td>
+                                <td>{{ website.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    {% if website.is_active %}
+                                        <span class="badge badge-active">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-inactive">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('website_history', website_id=website.id) }}" class="btn-action">📊 History</a>
+                                        <form method="POST" action="{{ url_for('check_website_manual', website_id=website.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn-action">🔄 Check Now</button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('delete_website', website_id=website.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn-delete" onclick="return confirm('Are you sure?')">🗑️ Delete</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No websites being monitored yet.</p>
+                <a href="{{ url_for('add_website') }}" class="btn btn-primary">Add Your First Website</a>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}
