@@ -1,12 +1,10 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from app import app, limiter
 from models import db, User, Website, MonitoringResult
 from forms import SignupForm, LoginForm, AddWebsiteForm
 from monitoring import run_check_for_website
-from datetime import datetime
 
-def register_routes(app):
+def register_routes(app, limiter):
     """Register all application routes"""
     
     @app.route('/')
@@ -25,13 +23,11 @@ def register_routes(app):
         
         form = SignupForm()
         if form.validate_on_submit():
-            # Check if user exists
             user = User.query.filter_by(email=form.email.data).first()
             if user:
                 flash('Email already registered', 'danger')
                 return redirect(url_for('signup'))
             
-            # Create new user
             user = User(email=form.email.data)
             user.set_password(form.password.data)
             db.session.add(user)
@@ -70,7 +66,7 @@ def register_routes(app):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        """User dashboard - show all websites"""
+        """User dashboard"""
         websites = Website.query.filter_by(user_id=current_user.id).all()
         return render_template('dashboard.html', websites=websites)
     
@@ -80,7 +76,6 @@ def register_routes(app):
         """Add a website to monitor"""
         form = AddWebsiteForm()
         if form.validate_on_submit():
-            # Check if website already exists for this user
             website = Website.query.filter_by(
                 user_id=current_user.id,
                 url=form.url.data
@@ -90,7 +85,6 @@ def register_routes(app):
                 flash('You are already monitoring this website', 'warning')
                 return redirect(url_for('dashboard'))
             
-            # Create new website
             website = Website(
                 url=form.url.data,
                 user_id=current_user.id,
@@ -110,7 +104,6 @@ def register_routes(app):
         """Manually check a website"""
         website = Website.query.get(website_id)
         
-        # Verify user owns this website
         if not website or website.user_id != current_user.id:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
@@ -126,15 +119,13 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/history')
     @login_required
     def website_history(website_id):
-        """View monitoring history for a website"""
+        """View monitoring history"""
         website = Website.query.get(website_id)
         
-        # Verify user owns this website
         if not website or website.user_id != current_user.id:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
         
-        # Get monitoring results
         results = MonitoringResult.query.filter_by(website_id=website_id).order_by(
             MonitoringResult.checked_at.desc()
         ).limit(100).all()
@@ -144,18 +135,14 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/delete', methods=['POST'])
     @login_required
     def delete_website(website_id):
-        """Delete a website from monitoring"""
+        """Delete a website"""
         website = Website.query.get(website_id)
         
-        # Verify user owns this website
         if not website or website.user_id != current_user.id:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
         
-        # Delete associated monitoring results first
         MonitoringResult.query.filter_by(website_id=website_id).delete()
-        
-        # Delete website
         db.session.delete(website)
         db.session.commit()
         
@@ -165,10 +152,9 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/toggle', methods=['POST'])
     @login_required
     def toggle_website(website_id):
-        """Enable/disable website monitoring"""
+        """Toggle website monitoring"""
         website = Website.query.get(website_id)
         
-        # Verify user owns this website
         if not website or website.user_id != current_user.id:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
