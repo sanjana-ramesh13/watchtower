@@ -1,119 +1,125 @@
-from app import limiter
-from flask import render_template, request, redirect, url_for, session, flash
-from functools import wraps
+from flask import render_template, redirect, url_for, flash, request
+from flask_login import login_user, logout_user, login_required, current_user
+from app import app, limiter
 from models import db, User, Website, MonitoringResult
 from forms import SignupForm, LoginForm, AddWebsiteForm
-from monitoring import run_check_for_website, run_checks_for_user
-
-def login_required(f):
-    """Decorator to protect routes - only logged-in users can access"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
+from monitoring import run_check_for_website
+from datetime import datetime
 
 def register_routes(app):
-    """Register all routes for the application"""
+    """Register all application routes"""
     
     @app.route('/')
     def index():
         """Home page"""
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
         return render_template('index.html')
     
     @app.route('/signup', methods=['GET', 'POST'])
     @limiter.limit("3 per minute")
     def signup():
-        """User signup route"""
-        form = SignupForm(request.form)
+        """User registration"""
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
         
-        if request.method == 'POST' and form.validate():
-            user = User(
-                username=form.username.data,
-                email=form.email.data
-            )
+        form = SignupForm()
+        if form.validate_on_submit():
+            # Check if user exists
+            user = User.query.filter_by(email=form.email.data).first()
+            if user:
+                flash('Email already registered', 'danger')
+                return redirect(url_for('signup'))
+            
+            # Create new user
+            user = User(email=form.email.data)
             user.set_password(form.password.data)
             db.session.add(user)
             db.session.commit()
-            session['user_id'] = user.id
-            return redirect(url_for('dashboard'))
+            
+            flash('Account created! Please login.', 'success')
+            return redirect(url_for('login'))
         
         return render_template('signup.html', form=form)
     
     @app.route('/login', methods=['GET', 'POST'])
     @limiter.limit("5 per minute")
     def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and user.check_password(form.password.data):
-            login_user(user)
+        """User login"""
+        if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
-        flash('Invalid email or password', 'danger')
-    return render_template('login.html', form=form)
+        
+        form = LoginForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(email=form.email.data).first()
+            if user and user.check_password(form.password.data):
+                login_user(user, remember=form.remember_me.data)
+                return redirect(url_for('dashboard'))
+            flash('Invalid email or password', 'danger')
+        
+        return render_template('login.html', form=form)
     
     @app.route('/logout')
+    @login_required
     def logout():
-        """Log user out"""
-        session.clear()
+        """User logout"""
+        logout_user()
+        flash('Logged out successfully', 'success')
         return redirect(url_for('index'))
     
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        """User dashboard"""
-        user_id = session.get('user_id')
-        user = User.query.get(user_id)
-        websites = Website.query.filter_by(user_id=user_id).all()
-        
-        return render_template('dashboard.html', user=user, websites=websites)
+        """User dashboard - show all websites"""
+        websites = Website.query.filter_by(user_id=current_user.id).all()
+        return render_template('dashboard.html', websites=websites)
     
     @app.route('/add-website', methods=['GET', 'POST'])
     @login_required
     def add_website():
-        """Add a new website"""
-        user_id = session.get('user_id')
-        user = User.query.get(user_id)
-        form = AddWebsiteForm(request.form)
-        message = None
-        
-        if request.method == 'POST' and form.validate():
+        """Add a website to monitor"""
+        form = AddWebsiteForm()
+        if form.validate_on_submit():
+            # Check if website already exists for this user
+            website = Website.query.filter_by(
+                user_id=current_user.id,
+                url=form.url.data
+            ).first()
+            
+            if website:
+                flash('You are already monitoring this website', 'warning')
+                return redirect(url_for('dashboard'))
+            
+            # Create new website
             website = Website(
-                name=form.name.data,
                 url=form.url.data,
-                user_id=user_id
+                user_id=current_user.id,
+                is_active=True
             )
             db.session.add(website)
             db.session.commit()
+            
+            flash(f'Started monitoring {form.url.data}', 'success')
             return redirect(url_for('dashboard'))
         
-        return render_template('add_website.html', form=form, user=user, message=message)
-    
-    @app.route('/website/<int:website_id>/delete', methods=['POST'])
-    @login_required
-    def delete_website(website_id):
-        """Delete a website"""
-        user_id = session.get('user_id')
-        website = Website.query.get(website_id)
-        
-        if website and website.user_id == user_id:
-            db.session.delete(website)
-            db.session.commit()
-        
-        return redirect(url_for('dashboard'))
+        return render_template('add_website.html', form=form)
     
     @app.route('/website/<int:website_id>/check', methods=['POST'])
     @login_required
-    def check_website_manual(website_id):
+    def check_website(website_id):
         """Manually check a website"""
-        user_id = session.get('user_id')
         website = Website.query.get(website_id)
         
-        # Verify user owns the website
-        if website and website.user_id == user_id:
-            run_check_for_website(website)
+        # Verify user owns this website
+        if not website or website.user_id != current_user.id:
+            flash('Website not found', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        try:
+            result = run_check_for_website(website)
+            flash(f'Check complete: {result.status_code}', 'success')
+        except Exception as e:
+            flash(f'Error checking website: {str(e)}', 'danger')
         
         return redirect(url_for('website_history', website_id=website_id))
     
@@ -121,16 +127,55 @@ def register_routes(app):
     @login_required
     def website_history(website_id):
         """View monitoring history for a website"""
-        user_id = session.get('user_id')
         website = Website.query.get(website_id)
         
-        # Verify user owns the website
-        if not website or website.user_id != user_id:
+        # Verify user owns this website
+        if not website or website.user_id != current_user.id:
+            flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
         
-        # Get last 20 monitoring results, ordered by most recent first
+        # Get monitoring results
         results = MonitoringResult.query.filter_by(website_id=website_id).order_by(
             MonitoringResult.checked_at.desc()
-        ).limit(20).all()
+        ).limit(100).all()
         
         return render_template('website_history.html', website=website, results=results)
+    
+    @app.route('/website/<int:website_id>/delete', methods=['POST'])
+    @login_required
+    def delete_website(website_id):
+        """Delete a website from monitoring"""
+        website = Website.query.get(website_id)
+        
+        # Verify user owns this website
+        if not website or website.user_id != current_user.id:
+            flash('Website not found', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        # Delete associated monitoring results first
+        MonitoringResult.query.filter_by(website_id=website_id).delete()
+        
+        # Delete website
+        db.session.delete(website)
+        db.session.commit()
+        
+        flash(f'Stopped monitoring {website.url}', 'success')
+        return redirect(url_for('dashboard'))
+    
+    @app.route('/website/<int:website_id>/toggle', methods=['POST'])
+    @login_required
+    def toggle_website(website_id):
+        """Enable/disable website monitoring"""
+        website = Website.query.get(website_id)
+        
+        # Verify user owns this website
+        if not website or website.user_id != current_user.id:
+            flash('Website not found', 'danger')
+            return redirect(url_for('dashboard'))
+        
+        website.is_active = not website.is_active
+        db.session.commit()
+        
+        status = 'enabled' if website.is_active else 'disabled'
+        flash(f'Monitoring {status}', 'success')
+        return redirect(url_for('dashboard'))
