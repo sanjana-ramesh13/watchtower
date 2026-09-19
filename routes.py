@@ -1,3 +1,4 @@
+from app import limiter
 from flask import render_template, request, redirect, url_for, session, flash
 from functools import wraps
 from models import db, User, Website, MonitoringResult
@@ -23,6 +24,7 @@ def register_routes(app):
         return render_template('index.html')
     
     @app.route('/signup', methods=['GET', 'POST'])
+    @limiter.limit("3 per minute")
     def signup():
         """User signup route"""
         form = SignupForm(request.form)
@@ -41,21 +43,16 @@ def register_routes(app):
         return render_template('signup.html', form=form)
     
     @app.route('/login', methods=['GET', 'POST'])
+    @limiter.limit("5 per minute")
     def login():
-        """User login route"""
-        form = LoginForm(request.form)
-        message = None
-        
-        if request.method == 'POST' and form.validate():
-            user = User.query.filter_by(email=form.email.data).first()
-            
-            if user and user.check_password(form.password.data):
-                session['user_id'] = user.id
-                return redirect(url_for('dashboard'))
-            else:
-                message = 'Invalid email or password'
-        
-        return render_template('login.html', form=form, message=message)
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        flash('Invalid email or password', 'danger')
+    return render_template('login.html', form=form)
     
     @app.route('/logout')
     def logout():

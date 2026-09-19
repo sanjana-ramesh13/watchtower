@@ -1,5 +1,7 @@
 import os
 from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config import SECRET_KEY, DEBUG, SQLALCHEMY_DATABASE_URI, SQLALCHEMY_TRACK_MODIFICATIONS
 from models import db
 from email_service import mail
@@ -9,13 +11,20 @@ from scheduler import start_scheduler
 # Create Flask app
 app = Flask(__name__)
 
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
 # Load configuration
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['DEBUG'] = DEBUG
 app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 
-# Override with environment variable if set (for Railway)
+# Override with environment variable if set (for Railway/Render)
 db_url = os.environ.get('DATABASE_URL')
 if db_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url
@@ -38,6 +47,28 @@ register_routes(app)
 
 # Start background scheduler for periodic checks
 start_scheduler()
+
+# Security headers
+@app.after_request
+def set_security_headers(response):
+    """Add security headers to all responses"""
+    
+    # Prevent clickjacking attacks
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    
+    # Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Enable XSS protection
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    # Referrer policy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    # Permissions policy
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+    
+    return response
 
 # Create database tables (if they don't exist)
 with app.app_context():
