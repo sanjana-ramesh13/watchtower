@@ -9,23 +9,16 @@ def register_routes(app, limiter):
     
     @app.route('/')
     def index():
-        """Home page"""
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
         return render_template('index.html')
     
     @app.route('/signup', methods=['GET', 'POST'])
     def signup():
-        """User registration"""
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
         
         form = SignupForm()
-        
-        # Only rate limit POST requests (form submission)
-        if request.method == 'POST':
-            limiter.limit("3 per minute")(lambda: None)()
-        
         if form.validate_on_submit():
             user = User.query.filter_by(email=form.email.data).first()
             if user:
@@ -44,16 +37,10 @@ def register_routes(app, limiter):
     
     @app.route('/login', methods=['GET', 'POST'])
     def login():
-        """User login"""
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
         
         form = LoginForm()
-        
-        # Only rate limit POST requests (form submission)
-        if request.method == 'POST':
-            limiter.limit("5 per minute")(lambda: None)()
-        
         if form.validate_on_submit():
             user = User.query.filter_by(email=form.email.data).first()
             if user and user.check_password(form.password.data):
@@ -66,7 +53,6 @@ def register_routes(app, limiter):
     @app.route('/logout')
     @login_required
     def logout():
-        """User logout"""
         logout_user()
         flash('Logged out successfully', 'success')
         return redirect(url_for('index'))
@@ -74,14 +60,12 @@ def register_routes(app, limiter):
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        """User dashboard"""
         websites = Website.query.filter_by(user_id=current_user.id).all()
         return render_template('dashboard.html', websites=websites)
     
     @app.route('/add-website', methods=['GET', 'POST'])
     @login_required
     def add_website():
-        """Add a website to monitor"""
         form = AddWebsiteForm()
         if form.validate_on_submit():
             website = Website.query.filter_by(
@@ -109,7 +93,6 @@ def register_routes(app, limiter):
     @app.route('/website/<int:website_id>/check', methods=['POST'])
     @login_required
     def check_website(website_id):
-        """Manually check a website"""
         website = Website.query.get(website_id)
         
         if not website or website.user_id != current_user.id:
@@ -127,7 +110,6 @@ def register_routes(app, limiter):
     @app.route('/website/<int:website_id>/history')
     @login_required
     def website_history(website_id):
-        """View monitoring history"""
         website = Website.query.get(website_id)
         
         if not website or website.user_id != current_user.id:
@@ -143,7 +125,6 @@ def register_routes(app, limiter):
     @app.route('/website/<int:website_id>/delete', methods=['POST'])
     @login_required
     def delete_website(website_id):
-        """Delete a website"""
         website = Website.query.get(website_id)
         
         if not website or website.user_id != current_user.id:
@@ -160,7 +141,6 @@ def register_routes(app, limiter):
     @app.route('/website/<int:website_id>/toggle', methods=['POST'])
     @login_required
     def toggle_website(website_id):
-        """Toggle website monitoring"""
         website = Website.query.get(website_id)
         
         if not website or website.user_id != current_user.id:
