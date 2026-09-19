@@ -1,4 +1,4 @@
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, User, Website, MonitoringResult
 from forms import SignupForm, LoginForm, AddWebsiteForm
@@ -15,13 +15,17 @@ def register_routes(app, limiter):
         return render_template('index.html')
     
     @app.route('/signup', methods=['GET', 'POST'])
-    @limiter.limit("3 per minute")
     def signup():
         """User registration"""
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
         
         form = SignupForm()
+        
+        # Only rate limit POST requests (form submission)
+        if request.method == 'POST':
+            limiter.limit("3 per minute")(lambda: None)()
+        
         if form.validate_on_submit():
             user = User.query.filter_by(email=form.email.data).first()
             if user:
@@ -39,13 +43,17 @@ def register_routes(app, limiter):
         return render_template('signup.html', form=form)
     
     @app.route('/login', methods=['GET', 'POST'])
-    @limiter.limit("5 per minute")
     def login():
         """User login"""
         if current_user.is_authenticated:
             return redirect(url_for('dashboard'))
         
         form = LoginForm()
+        
+        # Only rate limit POST requests (form submission)
+        if request.method == 'POST':
+            limiter.limit("5 per minute")(lambda: None)()
+        
         if form.validate_on_submit():
             user = User.query.filter_by(email=form.email.data).first()
             if user and user.check_password(form.password.data):
