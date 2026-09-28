@@ -1,13 +1,8 @@
 import os
 
-# Get DATABASE_URL from environment, ensure it uses psycopg2
-db_url = os.environ.get('DATABASE_URL', 'postgresql://postgres@localhost/watchtower')
+# Simple: just read DATABASE_URL as-is
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres@localhost/watchtower')
 
-# Convert postgresql:// to postgresql+psycopg2://
-if db_url and 'postgresql://' in db_url and 'psycopg2' not in db_url:
-    db_url = db_url.replace('postgresql://', 'postgresql+psycopg2://')
-
-DATABASE_URL = db_url
 SQLALCHEMY_DATABASE_URI = DATABASE_URL
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
