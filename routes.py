@@ -51,16 +51,11 @@ def register_routes(app):
         form = AddWebsiteForm()
         if form.validate_on_submit():
             website = Website.query.filter_by(url=form.url.data).first()
-            
             if website:
                 flash('Website already being monitored', 'warning')
                 return redirect(url_for('dashboard'))
             
-            website = Website(
-                url=form.url.data,
-                user_id=1,
-                is_active=True
-            )
+            website = Website(url=form.url.data, user_id=1, is_active=True)
             db.session.add(website)
             db.session.commit()
             
@@ -72,14 +67,13 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/check', methods=['POST'])
     def check_website(website_id):
         website = Website.query.get(website_id)
-        
         if not website:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
         
         try:
             result = run_check_for_website(website)
-            flash(f'Check complete: {result.status_code}', 'success')
+            flash(f'Check complete', 'success')
         except Exception as e:
             flash(f'Error: {str(e)}', 'danger')
         
@@ -88,7 +82,6 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/history')
     def website_history(website_id):
         website = Website.query.get(website_id)
-        
         if not website:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
@@ -102,7 +95,6 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/delete', methods=['POST'])
     def delete_website(website_id):
         website = Website.query.get(website_id)
-        
         if not website:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))
@@ -117,7 +109,6 @@ def register_routes(app):
     @app.route('/website/<int:website_id>/toggle', methods=['POST'])
     def toggle_website(website_id):
         website = Website.query.get(website_id)
-        
         if not website:
             flash('Website not found', 'danger')
             return redirect(url_for('dashboard'))

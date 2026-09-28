@@ -1,11 +1,9 @@
 import os
 
-# Simple: just read DATABASE_URL as-is
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres@localhost/watchtower')
 
 SQLALCHEMY_DATABASE_URI = DATABASE_URL
 SQLALCHEMY_TRACK_MODIFICATIONS = False
-
 SECRET_KEY = 'dev-key-change-in-production'
 DEBUG = False
 
