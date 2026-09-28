@@ -31,9 +31,12 @@ mail.init_app(app)
 register_routes(app)
 start_scheduler()
 
+# Create database tables
 with app.app_context():
+    # Drop all tables and recreate (fresh start)
+    db.drop_all()
     db.create_all()
-    print("✅ Database initialized!")
+    print("✅ Database dropped and recreated!")
 
 if __name__ == '__main__':
     app.run(debug=DEBUG, host='0.0.0.0', port=5000)
