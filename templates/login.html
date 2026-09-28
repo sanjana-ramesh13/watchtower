@@ -5,12 +5,12 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <h2>Login</h2>
-            <form method="POST" novalidate autocomplete="off">
+            <form method="POST" novalidate id="loginForm">
                 {{ form.hidden_tag() }}
                 
                 <div class="form-group mb-3">
                     {{ form.email.label }}
-                    {{ form.email(class="form-control", autocomplete="off") }}
+                    {{ form.email(class="form-control", id="email", autocomplete="email") }}
                     {% if form.email.errors %}
                         {% for error in form.email.errors %}
                             <small class="text-danger">{{ error }}</small>
@@ -20,7 +20,7 @@
                 
                 <div class="form-group mb-3">
                     {{ form.password.label }}
-                    {{ form.password(class="form-control", autocomplete="off") }}
+                    {{ form.password(class="form-control", id="password", autocomplete="current-password") }}
                     {% if form.password.errors %}
                         {% for error in form.password.errors %}
                             <small class="text-danger">{{ error }}</small>
@@ -37,4 +37,11 @@
         </div>
     </div>
 </div>
+
+<script>
+// Clear autofilled email field on page load (but allow password for login)
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('email').value = '';
+});
+</script>
 {% endblock %}
