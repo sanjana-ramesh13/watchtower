@@ -1,37 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Add Website - WatchTower{% endblock %}
-
 {% block content %}
-    <div class="auth-container">
-        <div class="auth-box">
-            <h2>Add Website to Monitor</h2>
-            <p class="form-description">Enter the details of the website you want to monitor</p>
-            
-            <form method="POST" class="form">
-                {% for field in form %}
-                    {% if field.type != 'CSRFTokenField' and field.type != 'SubmitField' %}
-                        <div class="form-group">
-                            {{ field.label(class='form-label') }}
-                            {{ field(class='form-input') }}
-                            
-                            {% if field.errors %}
-                                <div class="form-errors">
-                                    {% for error in field.errors %}
-                                        <p class="error">{{ error }}</p>
-                                    {% endfor %}
-                                </div>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Add Website to Monitor</h5>
+                    <p class="card-text">Enter the details of the website you want to monitor</p>
+                    
+                    <form method="POST" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-3">
+                            {{ form.url.label }}
+                            {{ form.url(class="form-control", placeholder="https://example.com") }}
+                            {% if form.url.errors %}
+                                {% for error in form.url.errors %}
+                                    <small class="text-danger">{{ error }}</small>
+                                {% endfor %}
                             {% endif %}
                         </div>
-                    {% endif %}
-                {% endfor %}
-                
-                {{ form.submit(class='btn btn-primary') }}
-            </form>
-            
-            <p class="auth-link">
-                <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
-            </p>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.submit(class="btn btn-primary w-100") }}
+                        </div>
+                    </form>
+                    
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-link">← Back to Dashboard</a>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 {% endblock %}
