@@ -5,12 +5,12 @@
     <div class="row justify-content-center">
         <div class="col-md-6">
             <h2>Login</h2>
-            <form method="POST" novalidate id="loginForm">
+            <form method="POST" novalidate id="loginForm" autocomplete="off">
                 {{ form.hidden_tag() }}
                 
                 <div class="form-group mb-3">
                     {{ form.email.label }}
-                    {{ form.email(class="form-control", id="email", autocomplete="email") }}
+                    {{ form.email(class="form-control", id="email", autocomplete="off") }}
                     {% if form.email.errors %}
                         {% for error in form.email.errors %}
                             <small class="text-danger">{{ error }}</small>
@@ -20,7 +20,7 @@
                 
                 <div class="form-group mb-3">
                     {{ form.password.label }}
-                    {{ form.password(class="form-control", id="password", autocomplete="current-password") }}
+                    {{ form.password(class="form-control", id="password", autocomplete="off") }}
                     {% if form.password.errors %}
                         {% for error in form.password.errors %}
                             <small class="text-danger">{{ error }}</small>
@@ -39,9 +39,25 @@
 </div>
 
 <script>
-// Clear autofilled email field on page load (but allow password for login)
-document.addEventListener('DOMContentLoaded', function() {
+// Aggressive clearing of autofilled fields
+function clearFields() {
     document.getElementById('email').value = '';
+    document.getElementById('password').value = '';
+}
+
+// Clear on load
+window.addEventListener('load', clearFields);
+
+// Clear after a short delay (browser autofill happens after load)
+setTimeout(clearFields, 100);
+
+// Clear when user focuses on fields
+document.getElementById('email').addEventListener('focus', function() {
+    if (this.value) this.value = '';
+});
+
+document.getElementById('password').addEventListener('focus', function() {
+    if (this.value) this.value = '';
 });
 </script>
 {% endblock %}
