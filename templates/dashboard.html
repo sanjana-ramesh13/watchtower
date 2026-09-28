@@ -34,41 +34,24 @@
                             
                             {% if latest_result %}
                                 {% if latest_result.is_up %}
-                                    <p class="card-text">
-                                        <span class="badge bg-success">UP</span>
-                                        Status: {{ latest_result.status_code }}
-                                    </p>
-                                    <p class="card-text">Response Time: {{ "%.2f"|format(latest_result.response_time) }}s</p>
+                                    <p><span class="badge bg-success">✓ UP</span> - {{ latest_result.status_code }}</p>
+                                    <p>Response Time: {{ "%.2f"|format(latest_result.response_time) }}s</p>
                                 {% else %}
-                                    <p class="card-text">
-                                        <span class="badge bg-danger">DOWN</span>
-                                    </p>
+                                    <p><span class="badge bg-danger">✗ DOWN</span></p>
                                 {% endif %}
-                                <p class="card-text text-muted small">
-                                    Last checked: {{ latest_result.checked_at.strftime('%Y-%m-%d %H:%M:%S') }}
-                                </p>
+                                <p class="text-muted small">Last: {{ latest_result.checked_at.strftime('%H:%M:%S') }}</p>
                             {% else %}
-                                <p class="card-text">
-                                    <span class="badge bg-secondary">NOT CHECKED</span>
-                                </p>
+                                <p><span class="badge bg-secondary">NOT CHECKED</span></p>
                             {% endif %}
                             
-                            <div class="mt-3">
+                            <div class="mt-3 d-flex gap-2">
                                 <form method="POST" action="{{ url_for('check_website', website_id=website.id) }}" style="display:inline;">
                                     <button type="submit" class="btn btn-sm btn-info">Check Now</button>
                                 </form>
                                 
                                 <a href="{{ url_for('website_history', website_id=website.id) }}" class="btn btn-sm btn-secondary">History</a>
                                 
-                                <form method="POST" action="{{ url_for('toggle_website', website_id=website.id) }}" style="display:inline;">
-                                    {% if website.is_active %}
-                                        <button type="submit" class="btn btn-sm btn-warning">Disable</button>
-                                    {% else %}
-                                        <button type="submit" class="btn btn-sm btn-success">Enable</button>
-                                    {% endif %}
-                                </form>
-                                
-                                <form method="POST" action="{{ url_for('delete_website', website_id=website.id) }}" style="display:inline;" onsubmit="return confirm('Delete this website?');">
+                                <form method="POST" action="{{ url_for('delete_website', website_id=website.id) }}" style="display:inline;" onsubmit="return confirm('Delete?');">
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                                 </form>
                             </div>
@@ -79,7 +62,7 @@
         </div>
     {% else %}
         <div class="alert alert-info">
-            <p>No websites added yet. <a href="{{ url_for('add_website') }}">Add your first website</a> to start monitoring!</p>
+            <p>No websites yet. <a href="{{ url_for('add_website') }}">Add one</a> to start!</p>
         </div>
     {% endif %}
 </div>
