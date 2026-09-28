@@ -1,64 +1,86 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - WatchTower{% endblock %}
-
 {% block content %}
-    <div class="dashboard-container">
-        <div class="dashboard-header">
-            <h2>Welcome, {{ user.username }}!</h2>
-            <p>You have {{ websites|length }} website(s) being monitored</p>
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Dashboard</h2>
         </div>
-        
-        <div class="dashboard-actions">
+        <div class="col-md-4 text-end">
             <a href="{{ url_for('add_website') }}" class="btn btn-primary">+ Add Website</a>
         </div>
-        
-        {% if websites %}
-            <div class="websites-table">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Website Name</th>
-                            <th>URL</th>
-                            <th>Added On</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for website in websites %}
-                            <tr>
-                                <td>{{ website.name }}</td>
-                                <td><a href="{{ website.url }}" target="_blank">{{ website.url }}</a></td>
-                                <td>{{ website.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                                <td>
-                                    {% if website.is_active %}
-                                        <span class="badge badge-active">Active</span>
-                                    {% else %}
-                                        <span class="badge badge-inactive">Inactive</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <a href="{{ url_for('website_history', website_id=website.id) }}" class="btn-action">📊 History</a>
-                                        <form method="POST" action="{{ url_for('check_website_manual', website_id=website.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn-action">🔄 Check Now</button>
-                                        </form>
-                                        <form method="POST" action="{{ url_for('delete_website', website_id=website.id) }}" style="display: inline;">
-                                            <button type="submit" class="btn-delete" onclick="return confirm('Are you sure?')">🗑️ Delete</button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <p>No websites being monitored yet.</p>
-                <a href="{{ url_for('add_website') }}" class="btn btn-primary">Add Your First Website</a>
-            </div>
-        {% endif %}
     </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    {% if websites %}
+        <div class="row">
+            {% for website in websites %}
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ website.url }}</h5>
+                            
+                            {% set latest_result = website.results[0] if website.results else None %}
+                            
+                            {% if latest_result %}
+                                {% if latest_result.is_up %}
+                                    <p class="card-text">
+                                        <span class="badge bg-success">UP</span>
+                                        Status: {{ latest_result.status_code }}
+                                    </p>
+                                    <p class="card-text">Response Time: {{ "%.2f"|format(latest_result.response_time) }}s</p>
+                                {% else %}
+                                    <p class="card-text">
+                                        <span class="badge bg-danger">DOWN</span>
+                                    </p>
+                                {% endif %}
+                                <p class="card-text text-muted small">
+                                    Last checked: {{ latest_result.checked_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                </p>
+                            {% else %}
+                                <p class="card-text">
+                                    <span class="badge bg-secondary">NOT CHECKED</span>
+                                </p>
+                            {% endif %}
+                            
+                            <div class="mt-3">
+                                <form method="POST" action="{{ url_for('check_website', website_id=website.id) }}" style="display:inline;">
+                                    <button type="submit" class="btn btn-sm btn-info">Check Now</button>
+                                </form>
+                                
+                                <a href="{{ url_for('website_history', website_id=website.id) }}" class="btn btn-sm btn-secondary">History</a>
+                                
+                                <form method="POST" action="{{ url_for('toggle_website', website_id=website.id) }}" style="display:inline;">
+                                    {% if website.is_active %}
+                                        <button type="submit" class="btn btn-sm btn-warning">Disable</button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-sm btn-success">Enable</button>
+                                    {% endif %}
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('delete_website', website_id=website.id) }}" style="display:inline;" onsubmit="return confirm('Delete this website?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p>No websites added yet. <a href="{{ url_for('add_website') }}">Add your first website</a> to start monitoring!</p>
+        </div>
+    {% endif %}
+</div>
 {% endblock %}

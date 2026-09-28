@@ -4,7 +4,6 @@ from forms import SignupForm, LoginForm, AddWebsiteForm
 from monitoring import run_check_for_website
 
 def register_routes(app):
-    """Register all application routes"""
     
     @app.route('/')
     def index():
@@ -44,7 +43,8 @@ def register_routes(app):
     @app.route('/dashboard')
     def dashboard():
         websites = Website.query.all()
-        return render_template('dashboard.html', websites=websites)
+        user = {'username': 'User'}
+        return render_template('dashboard.html', websites=websites, user=user)
     
     @app.route('/add-website', methods=['GET', 'POST'])
     def add_website():
@@ -73,7 +73,7 @@ def register_routes(app):
         
         try:
             result = run_check_for_website(website)
-            flash(f'Check complete', 'success')
+            flash(f'Check complete: {result.status_code}', 'success')
         except Exception as e:
             flash(f'Error: {str(e)}', 'danger')
         
